@@ -1,12 +1,25 @@
 {
-  "name": "docker-nodejs",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "name": "docker-nodejs-sample",
+  "version": "0.0.1",
+  "homepage": "https://github.com/kristiyan-velkov/docker-nodejs-sample",
+  "author": {
+    "name": "Kristiyan Velkov",
+    "url": "https://www.linkedin.com/in/kristiyan-velkov-763130b3/"
+  },
+  "bugs": {
+    "url": "https://github.com/kristiyan-velkov/docker-nodejs-sample/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/kristiyan-velkov"
+  },
+  "private": true,
+  "type": "module",
   "scripts": {
     "prettify": "prettier -l --write \"**/*.js\"",
     "test": "jest",
-    "dev": "nodemon --inspect=0.0.0.0:9229 -L src/index.js"
+    "dev": "nodemon --inspect=0.0.0.0:9229 -L src/index.js",
+    "prod": "node src/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -29,5 +42,8 @@
     "jest": "^29.6.2",
     "nodemon": "^3.0.1",
     "prettier": "^2.7.1"
+  },  
+  "engines": {
+    "node": "22.14.0"
   }
 }

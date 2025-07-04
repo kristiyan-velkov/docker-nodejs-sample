@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-nodejs-demo
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      todo: web
+  template:
+    metadata:
+      labels:
+        todo: web
+    spec:
+      containers:
+        - name: todo-site
+          image: DOCKER_USERNAME/REPO_NAME
+          imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-entrypoint
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    todo: web
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30001
