@@ -1,67 +1,162 @@
-# Dependencies
+# ========================================
+# Dependencies & Package Managers
+# ========================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+bun.lockb
+.yarn/
+.pnp/
+.pnp.js
 
-# Build outputs
+# ========================================
+# Build Outputs & Distribution
+# ========================================
 dist/
 build/
-.next/
 out/
+.next/
+.nuxt/
+*.tsbuildinfo
+.turbo/
 
-# Runtime data
+# ========================================
+# Environment & Configuration
+# ========================================
+.env
+.env.*
+!.env.example
+!.env.template
+.envrc
+.tool-versions
+
+# ========================================
+# Development & Testing
+# ========================================
+# Test outputs
+coverage/
+.nyc_output/
+*.lcov
+.coverage/
+junit.xml
+test-results/
+playwright-report/
+test-results.xml
+
+# Development cache
+.cache/
+.tmp/
+.temp/
+*.tmp
+*.temp
+
+# ========================================
+# Database Files
+# ========================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+
+# ========================================
+# Logs & Runtime Data
+# ========================================
+logs/
+*.log
 pids/
 *.pid
 *.seed
 *.pid.lock
 
-# Coverage and test results
-coverage/
-.nyc_output
-*.lcov
-.coverage/
-junit.xml
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Local development
-.cache/
-.tmp/
-*.tsbuildinfo
-
-# Logs
-logs/
-*.log
-
-# Runtime data
-*.sqlite
-*.sqlite3
-*.db
-
-# IDE files
+# ========================================
+# IDE & Editor Files
+# ========================================
+# VSCode
 .vscode/settings.json
 .vscode/launch.json
+.vscode/extensions.json
+
+# IntelliJ/WebStorm
 .idea/
+*.iml
+*.iws
+
+# Vim/Emacs
 *.swp
 *.swo
 *~
+.#*
+\#*#
 
-# OS generated files
+# Sublime Text
+*.sublime-*
+
+# ========================================
+# OS Generated Files
+# ========================================
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db
+.AppleDouble
+.LSOverride
 
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ========================================
+# DevOps & Deployment
+# ========================================
 # Docker
 .dockerignore
 
-# Misc
+# Kubernetes
+*.yaml.bak
+*.yml.bak
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# ========================================
+# Security & Sensitive Data
+# ========================================
+# Certificates & Keys
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Security scanners
+.snyk
+.semgrep.yml
+
+# ========================================
+# Miscellaneous
+# ========================================
 .eslintcache
+.stylelintcache
+.parcel-cache/
+.vite/
+storybook-static/

@@ -1,77 +1,143 @@
-# =============================
-# Dependency directories
-# =============================
+# ========================================
+# Docker Build Context Optimization
+# Only include necessary files for builds
+# ========================================
+
+# ========================================
+# Version Control & Git
+# ========================================
+.git/
+.gitignore
+.gitattributes
+.gitmodules
+.github/
+
+# ========================================
+# Dependencies (will be installed in container)
+# ========================================
 node_modules/
+.npm/
+.yarn/
+.pnp/
+
+# ========================================
+# Build Outputs (built in container)
+# ========================================
 dist/
 build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
 
-# =============================
-# Logs & debugging
-# =============================
+# ========================================
+# Development & Local Files
+# ========================================
+# Environment files (except examples)
+.env
+.env.*
+!.env.example
+.envrc
+
+# Development cache
+.cache/
+.tmp/
+.temp/
+*.tmp
+
+# ========================================
+# Testing & Coverage (not needed in container)
+# ========================================
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+jest/
+cypress/screenshots/
+cypress/videos/
+*.lcov
+
+# ========================================
+# Logs & Runtime Data
+# ========================================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
-*.tsbuildinfo
-*.log
+*.pid
 
-# =============================
-# Environment files
-# =============================
-.env
-.env.*
-*.env
-
-# =============================
-# Editor / IDE configs
-# =============================
+# ========================================
+# IDE & Editor Files
+# ========================================
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
+.#*
+\#*#
+*.sublime-*
 
-# =============================
-# OS generated files
-# =============================
+# ========================================
+# OS Generated Files
+# ========================================
+# macOS
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows  
 Thumbs.db
+Desktop.ini
 
-# =============================
-# Git-related
-# =============================
-.git/
-.gitignore
+# Linux
+.directory
+.Trash-*
 
-# =============================
-# Docker / Compose files
-# =============================
+# ========================================
+# Docker & DevOps Files
+# ========================================
 .dockerignore
-Dockerfile*
-docker-compose*
+Dockerfile.dev
+docker-compose*.yml
+docker-compose*.yaml
+compose*.yml
+compose*.yaml
 
-# =============================
-# Testing / Reports / Coverage
-# =============================
-coverage/
-jest/
-reports/
-cypress/
-cypress/screenshots/
-cypress/videos/
-
-# =============================
-# Misc build tools & cache
-# =============================
-.tmp/
-.cache/
-.eslintcache
-.vs/
-
-# =============================
-# Optional Kubernetes/Helm
-# =============================
+# Kubernetes
+*.yaml.bak
+*.yml.bak
 charts/
 
-# =============================
-# Docs & meta files
-# =============================
-README.md
-LICENSE
+# ========================================
+# Documentation & Meta Files
+# ========================================
+README*.md
+CHANGELOG*
+LICENSE*
+docs/
+*.md
+!package.json
+
+# ========================================
+# Linting & Formatting Cache
+# ========================================
+.eslintcache
+.stylelintcache
+.parcel-cache/
+
+# ========================================
+# Database Files (development)
+# ========================================
+*.sqlite
+*.sqlite3
+*.db
+
+# ========================================
+# Security & Secrets
+# ========================================
+*.pem
+*.key
+*.crt

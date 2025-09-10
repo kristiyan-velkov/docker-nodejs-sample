@@ -1,0 +1,234 @@
+# ========================================
+# Docker Compose Configuration
+# Production-ready multi-environment setup
+# ========================================
+
+# ========================================
+# Default Environment Variables
+# ========================================
+x-common-variables: &common-variables
+  NODE_ENV: ${NODE_ENV:-development}
+  SQLITE_DB_PATH: ${SQLITE_DB_PATH:-/app/data/todo.db}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+# ========================================
+# Shared Configuration Templates
+# ========================================
+x-app-common: &app-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+    args:
+      NODE_VERSION: ${NODE_VERSION:-22.11.0}
+  environment:
+    <<: *common-variables
+  networks:
+    - app-network
+
+# ========================================
+# Services Configuration
+# ========================================
+services:
+  # ========================================
+  # Main Application - Development
+  # ========================================
+  app:
+    <<: *app-common
+    container_name: todoapp-dev
+    build:
+      target: development
+    ports:
+      - '${APP_PORT:-3000}:3000' # API server
+      - '${VITE_PORT:-5173}:5173' # Vite dev server
+      - '${DEBUG_PORT:-9229}:9229' # Node.js debugger
+    environment:
+      <<: *common-variables
+      NODE_ENV: development
+      ALLOWED_ORIGINS: 'http://localhost:3000,http://localhost:5173,http://localhost:${VITE_PORT:-5173}'
+    volumes:
+      # Source code hot-reloading for development
+      - ./src:/app/src:ro
+      - ./package*.json:/app/package*.json:ro
+      - ./tsconfig*.json:/app/tsconfig*.json:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
+      - ./tailwind.config.js:/app/tailwind.config.js:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
+      - ./eslint.config.js:/app/eslint.config.js:ro
+      - ./vitest.config.ts:/app/vitest.config.ts:ro
+      # SQLite database persistence
+      - sqlite_data:/app/data
+      # Preserve node_modules and dist in container
+      - /app/node_modules
+      - /app/dist
+    restart: unless-stopped
+    profiles:
+      - dev
+      - default
+
+  # ========================================
+  # Production Application
+  # ========================================
+  app-prod:
+    <<: *app-common
+    container_name: todoapp-prod
+    build:
+      target: production
+    ports:
+      - '${PROD_PORT:-8080}:3000'
+    environment:
+      <<: *common-variables
+      NODE_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://yourdomain.com}
+      NODE_OPTIONS: '--max-old-space-size=1024'
+    volumes:
+      # SQLite database persistence
+      - sqlite_data:/app/data
+    restart: unless-stopped
+    deploy:
+      replicas: 1 # SQLite doesn't support multiple concurrent writers
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    profiles:
+      - prod
+
+  # ========================================
+  # Redis Cache (Optional)
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: todoapp-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    profiles:
+      - redis
+      - prod
+
+  # ========================================
+  # Testing Service
+  # ========================================
+  test:
+    <<: *app-common
+    container_name: todoapp-test
+    build:
+      target: test
+    environment:
+      <<: *common-variables
+      NODE_ENV: test
+      SQLITE_DB_PATH: /tmp/test.db # Use temp database for tests
+      CI: 'true'
+    networks:
+      - test-network
+    profiles:
+      - test
+
+  # ========================================
+  # Nginx Reverse Proxy (Production)
+  # ========================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: todoapp-nginx
+    ports:
+      - '${NGINX_HTTP_PORT:-80}:80'
+      - '${NGINX_HTTPS_PORT:-443}:443'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_logs:/var/log/nginx
+      # SSL certificates (if using HTTPS)
+      - ssl_certs:/etc/ssl/certs:ro
+    depends_on:
+      - app-prod
+    networks:
+      - app-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+    profiles:
+      - nginx
+      - prod
+
+  # ========================================
+  # SQLite Backup Service
+  # ========================================
+  sqlite-backup:
+    <<: *app-common
+    container_name: todoapp-sqlite-backup
+    build:
+      target: production
+    environment:
+      <<: *common-variables
+      NODE_ENV: production
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+    volumes:
+      - sqlite_data:/app/data:ro
+      - sqlite_backups:/backups
+      - ./docker/scripts/sqlite-backup.sh:/backup.sh:ro
+    networks:
+      - app-network
+    command: ['/backup.sh']
+    restart: 'no'
+    profiles:
+      - backup
+
+# ========================================
+# Network Configuration
+# ========================================
+networks:
+  app-network:
+    driver: bridge
+    name: todoapp-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  test-network:
+    driver: bridge
+    name: todoapp-test-network
+
+# ========================================
+# Volume Configuration
+# ========================================
+volumes:
+  sqlite_data:
+    driver: local
+    name: todoapp-sqlite-data
+  sqlite_backups:
+    driver: local
+    name: todoapp-sqlite-backups
+  redis_data:
+    driver: local
+    name: todoapp-redis-data
+  nginx_logs:
+    driver: local
+    name: todoapp-nginx-logs
+  ssl_certs:
+    driver: local
+    name: todoapp-ssl-certs
