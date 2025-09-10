@@ -2,6 +2,10 @@
 
 This project demonstrates how to effectively containerize a modern Node.js application using Docker for both **development** and **production** workflows.
 
+<div align="center">
+  <img src="./src/images/node-js-docker.png" alt="Docker Scout check" />
+</div>
+
 It is used as part of the [official Docker Node.js sample](https://docs.docker.com/guides/nodejs), showcasing industry best practices for front-end containerization—including secure builds, streamlined development workflows, and optimized production delivery.
 
 **Author**
