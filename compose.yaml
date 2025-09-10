@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # Application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.new
+      target: development
+    ports:
+      - "3000:3000"    # API server
+      - "5173:5173"    # Vite dev server
+      - "9229:9229"    # Node.js debugger
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=todoapp
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # PostgreSQL database
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=todoapp
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d todoapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Redis (optional for session storage or caching)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - app-network
+    restart: unless-stopped
+    profiles:
+      - redis
+
+  # Production app service
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile.new
+      target: production
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=todoapp
+      - ALLOWED_ORIGINS=https://yourdomain.com
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # Testing service
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.new
+      target: test
+    environment:
+      - NODE_ENV=test
+      - POSTGRES_HOST=test-db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=todoapp_test
+    depends_on:
+      test-db:
+        condition: service_healthy
+    networks:
+      - test-network
+    profiles:
+      - test
+
+  # Test database
+  test-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=todoapp_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d todoapp_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - test-network
+    profiles:
+      - test
+
+networks:
+  app-network:
+    driver: bridge
+  test-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

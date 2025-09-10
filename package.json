@@ -1,6 +1,7 @@
 {
   "name": "docker-nodejs-sample",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Modern TypeScript Node.js Docker sample with React and Tailwind CSS",
   "homepage": "https://github.com/kristiyan-velkov/docker-nodejs-sample",
   "author": {
     "name": "Kristiyan Velkov",
@@ -16,34 +17,80 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prettify": "prettier -l --write \"**/*.js\"",
-    "test": "jest",
-    "dev": "nodemon --inspect=0.0.0.0:9229 -L src/index.js",
-    "prod": "node src/index.js"
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "tsx watch --inspect=0.0.0.0:9229 src/server/index.ts",
+    "dev:client": "vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:client": "vite build",
+    "start": "node dist/server/index.js",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\"",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.2",
-    "sqlite3": "^5.1.2",
-    "uuid": "^9.0.0",
-    "wait-port": "^1.0.4"
-  },
-  "resolutions": {
-    "ansi-regex": "5.0.1"
-  },
-  "prettier": {
-    "trailingComma": "all",
-    "tabWidth": 4,
-    "useTabs": false,
-    "semi": true,
-    "singleQuote": true
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.3",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0",
+    "wait-port": "^1.1.0",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
-    "jest": "^29.6.2",
-    "nodemon": "^3.0.1",
-    "prettier": "^2.7.1"
-  },  
+    "@tailwindcss/postcss": "^4.1.13",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.1",
+    "@types/pg": "^8.15.5",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "@types/sqlite3": "^5.1.0",
+    "@types/supertest": "^6.0.3",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "@vitejs/plugin-react": "^5.0.2",
+    "@vitest/coverage-v8": "^3.2.4",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.35.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "jsdom": "^26.1.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "supertest": "^7.1.4",
+    "tailwindcss": "^4.1.13",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5",
+    "vitest": "^3.2.4"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "es5",
+    "printWidth": 100,
+    "useTabs": false
+  },
   "engines": {
-    "node": "22.14.0"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   }
 }
