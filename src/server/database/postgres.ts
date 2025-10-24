@@ -1,7 +1,7 @@
-import { TodoItem } from '@/shared/types/todo.js';
 import { promises as fs } from 'fs';
 import { Client } from 'pg';
 import waitPort from 'wait-port';
+import { TodoItem } from '../../shared/types/todo.js';
 import { DatabaseInterface } from './interface.js';
 
 export class PostgresDatabase implements DatabaseInterface {
@@ -10,12 +10,22 @@ export class PostgresDatabase implements DatabaseInterface {
   async init(): Promise<void> {
     const config = await this.getConfig();
 
-    await waitPort({
+    console.log(`Waiting for PostgreSQL at ${config.host}:${config.port || 5432}...`);
+
+    const portOpen = await waitPort({
       host: config.host,
       port: config.port || 5432,
-      timeout: 10000,
+      timeout: 30000,
       waitForDns: true,
     });
+
+    if (!portOpen) {
+      throw new Error(
+        `Unable to connect to PostgreSQL at ${config.host}:${config.port || 5432}. Make sure the database is running.`
+      );
+    }
+
+    console.log('PostgreSQL is ready, connecting...');
 
     this.client = new Client(config);
 
@@ -106,7 +116,7 @@ export class PostgresDatabase implements DatabaseInterface {
     if (!this.client) throw new Error('Database not initialized');
 
     const setParts: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
     let paramIndex = 1;
 
     if (updates.name !== undefined) {

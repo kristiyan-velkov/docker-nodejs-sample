@@ -14,12 +14,8 @@ export interface UpdateTodoRequest {
 }
 
 export interface DatabaseConfig {
-  type: 'sqlite' | 'postgres';
-  connection: SqliteConfig | PostgresConfig;
-}
-
-export interface SqliteConfig {
-  location: string;
+  type: 'postgres';
+  connection: PostgresConfig;
 }
 
 export interface PostgresConfig {

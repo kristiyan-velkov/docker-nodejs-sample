@@ -1,12 +1,7 @@
-import { ApiError } from '@/shared/types/api.js';
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
+import { ApiError } from '../../shared/types/api.js';
 
-export const errorHandler = (
-  err: Error | ApiError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const errorHandler = (err: Error | ApiError, req: Request, res: Response) => {
   console.error('Error occurred:', err);
 
   // Handle custom API errors
@@ -20,9 +15,7 @@ export const errorHandler = (
 
   // Handle generic errors
   const status = 500;
-  const message = process.env.NODE_ENV === 'production' 
-    ? 'Internal server error' 
-    : err.message;
+  const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message;
 
   res.status(status).json({
     success: false,

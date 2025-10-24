@@ -1,159 +1,138 @@
+# syntax=docker/dockerfile:1
 # ========================================
-# Production-Grade Multi-Stage Dockerfile
-# Optimized for Node.js TypeScript Applications
+# Optimized Multi-Stage Dockerfile
+# Node.js TypeScript Application
 # ========================================
 
-# ========================================
-# Build Arguments & Base Image
-# ========================================
-ARG NODE_VERSION=22.11.0
-ARG ALPINE_VERSION=3.20
+ARG NODE_VERSION=22.21.0-alpine3.21
+FROM node:${NODE_VERSION} AS base
 
-FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS base
-
-# Install security updates and required packages
-RUN apk update && apk upgrade && \
-    apk add --no-cache \
-    dumb-init \
-    && rm -rf /var/cache/apk/*
-
-# Create app directory and non-root user
+# Set working directory
 WORKDIR /app
+
+# Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs && \
-    mkdir -p /app/data && \
-    chown nodejs:nodejs /app/data
+    chown -R nodejs:nodejs /app
 
 # ========================================
-# Dependencies Stage - Install packages
+# Dependencies Stage
 # ========================================
-FROM base AS dependencies
-
-# Copy package files first for better layer caching
-COPY --chown=nodejs:nodejs package*.json ./
-
-# Install dependencies with security best practices
-RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --only=production --ignore-scripts && \
-    npm cache clean --force
-
-# ========================================
-# Build Dependencies Stage
-# ========================================
-FROM base AS build-dependencies
+FROM base AS deps
 
 # Copy package files
-COPY --chown=nodejs:nodejs package*.json ./
+COPY package*.json ./
 
-# Install all dependencies including dev dependencies
+# Install production dependencies
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --include=dev --ignore-scripts && \
+    npm ci --omit=dev && \
     npm cache clean --force
 
+# Set proper ownership
+RUN chown -R nodejs:nodejs /app
+
 # ========================================
-# Build Stage - Compile TypeScript
+# Build Dependencies Stage  
 # ========================================
-FROM build-dependencies AS build
+FROM base AS build-deps
 
-# Copy configuration files
-COPY --chown=nodejs:nodejs tsconfig*.json ./
-COPY --chown=nodejs:nodejs vite.config.ts ./
-COPY --chown=nodejs:nodejs tailwind.config.js ./
-COPY --chown=nodejs:nodejs postcss.config.js ./
-COPY --chown=nodejs:nodejs eslint.config.js ./
-COPY --chown=nodejs:nodejs vitest.config.ts ./
+# Copy package files
+COPY package*.json ./
 
-# Copy source code
-COPY --chown=nodejs:nodejs src/ ./src/
+# Install all dependencies with build optimizations
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    npm ci --no-audit --no-fund && \
+    npm cache clean --force
 
-# Switch to nodejs user for build
-USER nodejs
+# Create necessary directories and set permissions
+RUN mkdir -p /app/node_modules/.vite && \
+    chown -R nodejs:nodejs /app
+
+# ========================================
+# Build Stage
+# ========================================
+FROM build-deps AS build
+
+# Copy only necessary files for building (respects .dockerignore)
+COPY --chown=nodejs:nodejs . .
 
 # Build the application
-RUN npm run build && \
-    npm prune --production
+RUN npm run build
+
+# Set proper ownership
+RUN chown -R nodejs:nodejs /app
 
 # ========================================
 # Development Stage
 # ========================================
-FROM build-dependencies AS development
+FROM build-deps AS development
 
-# Development environment variables
-ENV NODE_ENV=development
-ENV NPM_CONFIG_LOGLEVEL=warn
+# Set environment
+ENV NODE_ENV=development \
+    NPM_CONFIG_LOGLEVEL=warn
 
-# Copy configuration files
-COPY --chown=nodejs:nodejs tsconfig*.json ./
-COPY --chown=nodejs:nodejs vite.config.ts ./
-COPY --chown=nodejs:nodejs tailwind.config.js ./
-COPY --chown=nodejs:nodejs postcss.config.js ./
-COPY --chown=nodejs:nodejs eslint.config.js ./
-COPY --chown=nodejs:nodejs vitest.config.ts ./
+# Copy source files
+COPY . .
 
-# Copy source code
-COPY --chown=nodejs:nodejs src/ ./src/
+# Ensure all directories have proper permissions
+RUN mkdir -p /app/node_modules/.vite && \
+    chown -R nodejs:nodejs /app && \
+    chmod -R 755 /app
 
-# Switch to nodejs user
+# Switch to non-root user
 USER nodejs
 
-# Expose development ports
+# Expose ports
 EXPOSE 3000 5173 9229
 
-# Health check for development
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
-
-# Development command
-CMD ["dumb-init", "npm", "run", "dev"]
+# Start development server
+CMD ["npm", "run", "dev:docker"]
 
 # ========================================
 # Production Stage
 # ========================================
-FROM base AS production
+ARG NODE_VERSION=22.21.0-alpine3.21
+FROM node:${NODE_VERSION} AS production
 
-# Production environment variables
-ENV NODE_ENV=production
-ENV NPM_CONFIG_LOGLEVEL=error
-ENV NODE_OPTIONS="--max-old-space-size=1024"
+# Set working directory
+WORKDIR /app
 
-# Copy production dependencies
-COPY --from=dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=dependencies --chown=nodejs:nodejs /app/package*.json ./
+# Set optimized environment variables
+ENV NODE_ENV=production \
+    NODE_OPTIONS="--max-old-space-size=256 --no-warnings" \
+    NPM_CONFIG_LOGLEVEL=silent
 
-# Copy built application
+# Copy production dependencies from deps stage
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/package*.json ./
+
+# Copy built application from build stage
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
 
-# Switch to nodejs user for security
+
+# Switch to non-root user for security
 USER nodejs
 
-# Expose application port
+# Expose port
 EXPOSE 3000
 
-# Health check with shorter intervals for production
-HEALTHCHECK --interval=20s --timeout=5s --start-period=30s --retries=5 \
-    CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
-
-# Use dumb-init to handle signals properly
-CMD ["dumb-init", "node", "dist/server/index.js"]
+# Start production server
+CMD ["node", "dist/server.js"]
 
 # ========================================
-# Testing Stage
+# Test Stage
 # ========================================
-FROM build-dependencies AS test
+FROM build-deps AS test
 
-# Test environment variables
-ENV NODE_ENV=test
-ENV CI=true
+# Set environment
+ENV NODE_ENV=test \
+    CI=true
 
-# Copy all necessary files for testing
-COPY --chown=nodejs:nodejs tsconfig*.json ./
-COPY --chown=nodejs:nodejs vite.config.ts ./
-COPY --chown=nodejs:nodejs vitest.config.ts ./
-COPY --chown=nodejs:nodejs eslint.config.js ./
-COPY --chown=nodejs:nodejs src/ ./src/
+# Copy source files
+COPY --chown=nodejs:nodejs . .
 
-# Switch to nodejs user
+# Switch to non-root user
 USER nodejs
 
-# Run tests and generate coverage
+# Run tests with coverage
 CMD ["npm", "run", "test:coverage"]

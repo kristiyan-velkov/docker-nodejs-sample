@@ -1,4 +1,4 @@
-import { TodoItem } from '@/shared/types/todo.js';
+import { TodoItem } from '../../shared/types/todo.js';
 
 export interface DatabaseInterface {
   init(): Promise<void>;

@@ -1,143 +1,118 @@
 # ========================================
+
 # Docker Build Context Optimization
-# Only include necessary files for builds
-# ========================================
 
 # ========================================
-# Version Control & Git
-# ========================================
+
+# Version Control
+
 .git/
 .gitignore
 .gitattributes
-.gitmodules
 .github/
 
-# ========================================
-# Dependencies (will be installed in container)
-# ========================================
+# Dependencies (installed in container)
+
 node_modules/
 .npm/
 .yarn/
 .pnp/
+.pnpm-store/
 
-# ========================================
-# Build Outputs (built in container)
-# ========================================
+# Build outputs (built in container)
+
 dist/
 build/
 out/
-.next/
-.turbo/
-*.tsbuildinfo
+\*.tsbuildinfo
 
-# ========================================
-# Development & Local Files
-# ========================================
 # Environment files (except examples)
-.env
-.env.*
-!.env.example
-.envrc
 
-# Development cache
+.env
+.env.\*
+!.env.example
+
+# Development cache & temp files
+
 .cache/
 .tmp/
 .temp/
-*.tmp
+\*.tmp
 
-# ========================================
-# Testing & Coverage (not needed in container)
-# ========================================
+# Testing & Coverage
+
 coverage/
 .nyc_output/
 test-results/
-playwright-report/
-jest/
-cypress/screenshots/
-cypress/videos/
-*.lcov
+\*.lcov
 
-# ========================================
-# Logs & Runtime Data
-# ========================================
+# Logs
+
 logs/
-*.log
-npm-debug.log*
+_.log
+npm-debug.log_
 yarn-debug.log*
 pnpm-debug.log*
-*.pid
 
-# ========================================
-# IDE & Editor Files
-# ========================================
+# IDE & Editor files
+
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.#*
-\#*#
-*.sublime-*
+_.swp
+_.swo
+\*~
 
-# ========================================
-# OS Generated Files
-# ========================================
-# macOS
+# OS files
+
 .DS_Store
-._*
-.Spotlight-V100
-.Trashes
-
-# Windows  
 Thumbs.db
 Desktop.ini
 
-# Linux
-.directory
-.Trash-*
+# Docker files (except main Dockerfile)
 
-# ========================================
-# Docker & DevOps Files
-# ========================================
 .dockerignore
-Dockerfile.dev
 docker-compose*.yml
-docker-compose*.yaml
 compose*.yml
-compose*.yaml
 
-# Kubernetes
-*.yaml.bak
-*.yml.bak
-charts/
+# Documentation
 
-# ========================================
-# Documentation & Meta Files
-# ========================================
 README*.md
 CHANGELOG*
 LICENSE*
 docs/
+nodejs/
 *.md
-!package.json
 
-# ========================================
-# Linting & Formatting Cache
-# ========================================
+# Linting cache
+
 .eslintcache
 .stylelintcache
-.parcel-cache/
 
-# ========================================
-# Database Files (development)
-# ========================================
-*.sqlite
-*.sqlite3
-*.db
+# Database files (development)
 
-# ========================================
-# Security & Secrets
-# ========================================
-*.pem
-*.key
-*.crt
+_.sqlite
+_.sqlite3
+\*.db
+data/
+
+# Security files
+
+_.pem
+_.key
+\*.crt
+
+# Backup files
+
+_.bak
+_.backup
+\*.old
+# Additional optimization excludes
+Taskfile.yml
+.editorconfig
+.prettierrc*
+jest.config.*
+vitest.config.*
+cypress/
+playwright/
+.storybook/
+storybook-static/

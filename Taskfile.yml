@@ -1,68 +1,407 @@
-version: "3"
+version: '3'
 
 vars:
-  IMAGE_NAME: node-js-app
+  # Image Configuration
+  IMAGE_NAME: docker-nodejs-sample
   IMAGE_TAG: latest
-  CONTAINER_NAME: node-js-app-container
-  HOST_PORT: 4200
-  CONTAINER_PORT: 8080
+  REGISTRY: ghcr.io
+  REGISTRY_USER: '{{.REGISTRY_USER | default "your-username"}}'
+  FULL_IMAGE_NAME: '{{.REGISTRY}}/{{.REGISTRY_USER}}/{{.IMAGE_NAME}}'
+  
+  # Container Configuration
+  CONTAINER_NAME: todoapp-container
+  CONTAINER_NAME_PROD: todoapp-prod-container
+  CONTAINER_NAME_DEV: todoapp-dev-container
+  
+  # Port Configuration
+  HOST_PORT: 3000
+  HOST_PORT_PROD: 8080
+  VITE_PORT: 5173
+  DEBUG_PORT: 9229
+  
+  # Build Configuration
   DOCKERFILE: Dockerfile
-  NODE_VERSION: 24.7.0-alpine
-  NGINX_VERSION: alpine3.22
+  NODE_VERSION: 22.21.0-alpine3.21
+  ALPINE_VERSION: 3.20
   NODE_ENV: production
+  
+  # Docker Compose Configuration
+  COMPOSE_FILE: compose.yml
+  COMPOSE_PROJECT: todoapp
 
 tasks:
-  build:
-    desc: "Build the Docker image"
+  # ========================================
+  # Development Tasks
+  # ========================================
+  
+  dev:
+    desc: "Start development environment with hot reload"
     cmds:
-      - docker build
+      - docker compose up --build
+    
+  dev:build:
+    desc: "Build development Docker image"
+    cmds:
+      - docker build 
+        --target development 
         --build-arg NODE_VERSION={{.NODE_VERSION}}
-        --build-arg NGINX_VERSION={{.NGINX_VERSION}}
-        -f {{.DOCKERFILE}} -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+        --build-arg ALPINE_VERSION={{.ALPINE_VERSION}}
+        -f {{.DOCKERFILE}} 
+        -t {{.IMAGE_NAME}}:dev .
+  
+  dev:run:
+    desc: "Run development container"
+    cmds:
+      - docker rm -f {{.CONTAINER_NAME_DEV}} 2>/dev/null || true
+      - docker run -d 
+        --name {{.CONTAINER_NAME_DEV}} 
+        -p {{.HOST_PORT}}:3000 
+        -p {{.VITE_PORT}}:5173 
+        -p {{.DEBUG_PORT}}:9229 
+        -v $(pwd)/src:/app/src:ro 
+        -v sqlite_data:/app/data 
+        -e NODE_ENV=development 
+        {{.IMAGE_NAME}}:dev
 
+  # ========================================
+  # Production Build Tasks
+  # ========================================
+  
+  build:
+    desc: "Build production Docker image"
+    cmds:
+      - docker build 
+        --target production 
+        --build-arg NODE_VERSION={{.NODE_VERSION}}
+        --build-arg ALPINE_VERSION={{.ALPINE_VERSION}}
+        -f {{.DOCKERFILE}} 
+        -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+  
+  build:multi:
+    desc: "Build multi-platform Docker image for production"
+    cmds:
+      - docker buildx build 
+        --platform linux/amd64,linux/arm64 
+        --target production 
+        --build-arg NODE_VERSION={{.NODE_VERSION}}
+        --build-arg ALPINE_VERSION={{.ALPINE_VERSION}}
+        -f {{.DOCKERFILE}} 
+        -t {{.FULL_IMAGE_NAME}}:{{.IMAGE_TAG}} 
+        --push .
+
+  build:test:
+    desc: "Build test Docker image"
+    cmds:
+      - docker build 
+        --target test 
+        --build-arg NODE_VERSION={{.NODE_VERSION}}
+        --build-arg ALPINE_VERSION={{.ALPINE_VERSION}}
+        -f {{.DOCKERFILE}} 
+        -t {{.IMAGE_NAME}}:test .
+
+  # ========================================
+  # Container Management Tasks
+  # ========================================
+  
   run:
-    desc: "Run the Docker container"
+    desc: "Run production Docker container"
     cmds:
-      - docker rm -f {{.CONTAINER_NAME}} 2>/dev/null
-      - docker run -d --name {{.CONTAINER_NAME}} -p {{.HOST_PORT}}:{{.CONTAINER_PORT}} {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+      - docker rm -f {{.CONTAINER_NAME_PROD}} 2>/dev/null || true
+      - docker run -d 
+        --name {{.CONTAINER_NAME_PROD}} 
+        -p {{.HOST_PORT_PROD}}:3000 
+        -v sqlite_data:/app/data 
+        -e NODE_ENV={{.NODE_ENV}} 
+        -e SQLITE_DB_PATH=/app/data/todo.db
+        -e ALLOWED_ORIGINS=https://yourdomain.com 
+        --restart unless-stopped 
+        {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
 
-  build-run:
-    desc: "Build and run the Docker container in one step"
+  run:interactive:
+    desc: "Run container interactively for debugging"
     cmds:
-      - task: build
-      - task: run
+      - docker run -it --rm 
+        -p {{.HOST_PORT}}:3000 
+        -v sqlite_data:/app/data 
+        -e NODE_ENV=development 
+        {{.IMAGE_NAME}}:{{.IMAGE_TAG}} /bin/sh
 
   stop:
-    desc: "Stop the running Docker container"
+    desc: "Stop all running containers"
     cmds:
-      - docker stop {{.CONTAINER_NAME}}
+      - docker stop {{.CONTAINER_NAME_PROD}} 2>/dev/null || true
+      - docker stop {{.CONTAINER_NAME_DEV}} 2>/dev/null || true
 
   restart:
-    desc: "Restart the Docker container"
+    desc: "Restart production container"
     cmds:
       - task: stop
       - task: run
 
+  # ========================================
+  # Docker Compose Tasks
+  # ========================================
+  
+  compose:up:
+    desc: "Start all services with Docker Compose"
+    cmds:
+      - docker compose up -d --build
+
+  compose:up:prod:
+    desc: "Start production services with Docker Compose"
+    cmds:
+      - docker compose --profile prod up -d --build
+
+  compose:down:
+    desc: "Stop and remove all Docker Compose services"
+    cmds:
+      - docker compose down -v
+
+  compose:logs:
+    desc: "Show logs from all Docker Compose services"
+    cmds:
+      - docker compose logs -f
+
+  compose:ps:
+    desc: "Show status of Docker Compose services"
+    cmds:
+      - docker compose ps
+
+  # ========================================
+  # Testing Tasks
+  # ========================================
+  
+  test:
+    desc: "Run tests in Docker container"
+    cmds:
+      - docker compose --profile test up --build --abort-on-container-exit
+
+  test:unit:
+    desc: "Run unit tests with coverage"
+    cmds:
+      - docker run --rm 
+        -v $(pwd)/coverage:/app/coverage 
+        {{.IMAGE_NAME}}:test npm run test:coverage
+
+  test:lint:
+    desc: "Run linting in container"
+    cmds:
+      - docker run --rm {{.IMAGE_NAME}}:test npm run lint
+
+  test:type-check:
+    desc: "Run TypeScript type checking"
+    cmds:
+      - docker run --rm {{.IMAGE_NAME}}:test npm run type-check
+
+  # ========================================
+  # Registry Tasks
+  # ========================================
+  
+  push:
+    desc: "Push Docker image to registry"
+    deps: [build]
+    cmds:
+      - docker tag {{.IMAGE_NAME}}:{{.IMAGE_TAG}} {{.FULL_IMAGE_NAME}}:{{.IMAGE_TAG}}
+      - docker push {{.FULL_IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  pull:
+    desc: "Pull Docker image from registry"
+    cmds:
+      - docker pull {{.FULL_IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  login:
+    desc: "Login to container registry"
+    cmds:
+      - echo $GITHUB_TOKEN | docker login {{.REGISTRY}} -u {{.REGISTRY_USER}} --password-stdin
+
+  # ========================================
+  # Kubernetes Tasks
+  # ========================================
+  
+  k8s:deploy:
+    desc: "Deploy to Kubernetes"
+    cmds:
+      - kubectl apply -f nodejs-sample-kubernetes.yaml
+
+  k8s:delete:
+    desc: "Delete Kubernetes deployment"
+    cmds:
+      - kubectl delete -f nodejs-sample-kubernetes.yaml
+
+  k8s:status:
+    desc: "Check Kubernetes deployment status"
+    cmds:
+      - kubectl get pods -n todoapp
+      - kubectl get services -n todoapp
+      - kubectl get ingress -n todoapp
+
+  k8s:logs:
+    desc: "Show Kubernetes pod logs"
+    cmds:
+      - kubectl logs -f deployment/todoapp-deployment -n todoapp
+
+  k8s:scale:
+    desc: "Scale Kubernetes deployment (usage: task k8s:scale REPLICAS=3)"
+    cmds:
+      - kubectl scale deployment todoapp-deployment --replicas={{.REPLICAS | default "2"}} -n todoapp
+
+  # ========================================
+  # Monitoring and Debugging Tasks
+  # ========================================
+  
   logs:
-    desc: "Show real-time logs from the Docker container"
+    desc: "Show real-time logs from production container"
     cmds:
-      - docker logs -f {{.CONTAINER_NAME}}
+      - docker logs -f {{.CONTAINER_NAME_PROD}}
 
+  logs:dev:
+    desc: "Show real-time logs from development container"
+    cmds:
+      - docker logs -f {{.CONTAINER_NAME_DEV}}
+
+  exec:
+    desc: "Execute shell in running production container"
+    cmds:
+      - docker exec -it {{.CONTAINER_NAME_PROD}} /bin/sh
+
+  exec:dev:
+    desc: "Execute shell in running development container"
+    cmds:
+      - docker exec -it {{.CONTAINER_NAME_DEV}} /bin/sh
+
+  health:
+    desc: "Check application health"
+    cmds:
+      - curl -f http://localhost:{{.HOST_PORT_PROD}}/health || echo "Health check failed"
+
+  stats:
+    desc: "Show container resource usage"
+    cmds:
+      - docker stats {{.CONTAINER_NAME_PROD}} --no-stream
+
+  # ========================================
+  # Database Tasks
+  # ========================================
+  
+  db:backup:
+    desc: "Backup SQLite database"
+    cmds:
+      - docker exec {{.CONTAINER_NAME_PROD}} sqlite3 /app/data/todo.db ".backup /tmp/backup-$(date +%Y%m%d-%H%M%S).db"
+      - docker cp {{.CONTAINER_NAME_PROD}}:/tmp/backup-$(date +%Y%m%d-%H%M%S).db ./backups/
+
+  db:restore:
+    desc: "Restore SQLite database (usage: task db:restore BACKUP_FILE=backup.db)"
+    cmds:
+      - docker cp {{.BACKUP_FILE}} {{.CONTAINER_NAME_PROD}}:/tmp/restore.db
+      - docker exec {{.CONTAINER_NAME_PROD}} sqlite3 /app/data/todo.db ".restore /tmp/restore.db"
+
+  # ========================================
+  # Cleanup Tasks
+  # ========================================
+  
   clean:
-    desc: "Remove the Docker container and image"
+    desc: "Remove containers and images"
     cmds:
-      - task: clean-container
-      - task: clean-image
+      - task: clean:containers
+      - task: clean:images
 
-  clean-container:
-    desc: "Remove the Docker container only"
+  clean:containers:
+    desc: "Remove all project containers"
     cmds:
-      - docker rm -f {{.CONTAINER_NAME}} 2>/dev/null
+      - docker rm -f {{.CONTAINER_NAME_PROD}} 2>/dev/null || true
+      - docker rm -f {{.CONTAINER_NAME_DEV}} 2>/dev/null || true
 
-  clean-image:
-    desc: "Remove the Docker image only"
+  clean:images:
+    desc: "Remove all project images"
     cmds:
-      - docker rmi {{.IMAGE_NAME}}:{{.IMAGE_TAG}} 2>/dev/null
+      - docker rmi {{.IMAGE_NAME}}:{{.IMAGE_TAG}} 2>/dev/null || true
+      - docker rmi {{.IMAGE_NAME}}:dev 2>/dev/null || true
+      - docker rmi {{.IMAGE_NAME}}:test 2>/dev/null || true
+
+  clean:volumes:
+    desc: "Remove all project volumes (WARNING: This will delete data!)"
+    cmds:
+      - docker volume rm sqlite_data 2>/dev/null || true
+
+  clean:all:
+    desc: "Complete cleanup including volumes (WARNING: This will delete all data!)"
+    cmds:
+      - task: compose:down
+      - task: clean:containers
+      - task: clean:images
+      - task: clean:volumes
+      - docker system prune -f
+
+  # ========================================
+  # Security Tasks
+  # ========================================
+  
+  security:scan:
+    desc: "Scan Docker image for vulnerabilities"
+    cmds:
+      - docker run --rm -v /var/run/docker.sock:/var/run/docker.sock 
+        aquasec/trivy image {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  security:audit:
+    desc: "Run npm security audit"
+    cmds:
+      - docker run --rm {{.IMAGE_NAME}}:test npm audit --audit-level moderate
+
+  # ========================================
+  # CI/CD Tasks
+  # ========================================
+  
+  ci:build:
+    desc: "CI build pipeline"
+    cmds:
+      - task: build:test
+      - task: test:lint
+      - task: test:type-check
+      - task: test:unit
+      - task: build
+      - task: security:scan
+
+  ci:deploy:
+    desc: "CI deployment pipeline"
+    deps: [ci:build]
+    cmds:
+      - task: push
+      - task: k8s:deploy
+
+  # ========================================
+  # Utility Tasks
+  # ========================================
+  
+  build-run:
+    desc: "Build and run production container in one step"
+    cmds:
+      - task: build
+      - task: run
+
+  build-run:dev:
+    desc: "Build and run development container in one step"
+    cmds:
+      - task: dev:build
+      - task: dev:run
+
+  ps:
+    desc: "Show all running containers"
+    cmds:
+      - docker ps --filter "name={{.CONTAINER_NAME}}"
+
+  images:
+    desc: "Show all project images"
+    cmds:
+      - docker images {{.IMAGE_NAME}}
+
+  info:
+    desc: "Show project information"
+    cmds:
+      - echo "Project: {{.IMAGE_NAME}}"
+      - echo "Registry: {{.FULL_IMAGE_NAME}}"
+      - echo "Node Version: {{.NODE_VERSION}}"
+      - echo "Production Port: {{.HOST_PORT_PROD}}"
+      - echo "Development Port: {{.HOST_PORT}}"
 
   default:
     desc: "Show available commands"

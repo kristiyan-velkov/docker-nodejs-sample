@@ -19,12 +19,42 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Required for Docker containers
     port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
       },
+    },
+  },
+  // Vitest configuration
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    root: '.', // Override root for tests to run from project root
+    setupFiles: ['src/shared/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      include: ['src/**/*.{js,ts,jsx,tsx}'],
+      exclude: [
+        'node_modules/',
+        'src/shared/test/',
+        'src/client/index.html',
+        'src/client/main.tsx',
+        '**/*.d.ts',
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
+        '**/__tests__/**',
+        'dist/',
+        'coverage/',
+        '*.config.{js,ts}',
+        'vite.config.ts',
+        'tailwind.config.js',
+        'postcss.config.js',
+        'eslint.config.js',
+      ],
     },
   },
 });

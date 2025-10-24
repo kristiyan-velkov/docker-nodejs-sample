@@ -1,33 +1,334 @@
+# ========================================
+# Production-Ready Kubernetes Configuration
+# Node.js Todo Application with PostgreSQL
+#
+# Features:
+# - Express 5.x server with esbuild (12KB bundle)
+# - React 19 frontend served from single port
+# - PostgreSQL 16 database with persistent storage
+# - Horizontal Pod Autoscaling
+# - Security hardening and resource limits
+# ========================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: todoapp
+  labels:
+    name: todoapp
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: todoapp-secrets
+  namespace: todoapp
+type: Opaque
+data:
+  postgres-password: dG9kb2FwcF9wYXNzd29yZA== # base64 encoded "todoapp_password"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todoapp-config
+  namespace: todoapp
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  ALLOWED_ORIGINS: "https://yourdomain.com"
+  POSTGRES_HOST: "todoapp-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "todoapp"
+  POSTGRES_USER: "todoapp"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: todoapp
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard # Adjust based on your cluster
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: docker-nodejs-demo
-  namespace: default
+  name: todoapp-postgres
+  namespace: todoapp
+  labels:
+    app: todoapp-postgres
 spec:
   replicas: 1
   selector:
     matchLabels:
-      todo: web
+      app: todoapp-postgres
   template:
     metadata:
       labels:
-        todo: web
+        app: todoapp-postgres
     spec:
       containers:
-        - name: todo-site
-          image: DOCKER_USERNAME/REPO_NAME
-          imagePullPolicy: Always
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todoapp-secrets
+                  key: postgres-password
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - todoapp
+                - -d
+                - todoapp
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - todoapp
+                - -d
+                - todoapp
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: todo-entrypoint
-  namespace: default
+  name: todoapp-postgres
+  namespace: todoapp
+  labels:
+    app: todoapp-postgres
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
-    todo: web
+    app: todoapp-postgres
   ports:
-    - port: 3000
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todoapp-deployment
+  namespace: todoapp
+  labels:
+    app: todoapp
+    version: v1
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: todoapp
+  template:
+    metadata:
+      labels:
+        app: todoapp
+        version: v1
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+        - name: todoapp
+          image: ghcr.io/your-username/docker-nodejs-sample:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: NODE_ENV
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: PORT
+            - name: ALLOWED_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: ALLOWED_ORIGINS
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: todoapp-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todoapp-secrets
+                  key: postgres-password
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todoapp-service
+  namespace: todoapp
+  labels:
+    app: todoapp
+spec:
+  type: ClusterIP
+  selector:
+    app: todoapp
+  ports:
+    - name: http
+      port: 80
       targetPort: 3000
-      nodePort: 30001
+      protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todoapp-ingress
+  namespace: todoapp
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - yourdomain.com
+      secretName: todoapp-tls
+  rules:
+    - host: yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: todoapp-service
+                port:
+                  number: 80
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: todoapp-pdb
+  namespace: todoapp
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: todoapp
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: todoapp-hpa
+  namespace: todoapp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: todoapp-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

@@ -1,7 +1,7 @@
-import { TodoItem } from '@/shared/types/todo.js';
-import { createTodoSchema, todoIdSchema, updateTodoSchema } from '@/shared/utils/validation.js';
 import { NextFunction, Request, Response, Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { TodoItem } from '../../shared/types/todo.js';
+import { createTodoSchema, todoIdSchema, updateTodoSchema } from '../../shared/utils/validation.js';
 import { db } from '../database/index.js';
 import { validateBody, validateParams } from '../middleware/validation.js';
 
@@ -21,12 +21,13 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 });
 
 // GET /api/todos/:id - Get single todo
-router.get('/:id', 
+router.get(
+  '/:id',
   validateParams(todoIdSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const item = await db.getItem(req.params.id);
-      
+
       if (!item) {
         return res.status(404).json({
           success: false,
@@ -45,7 +46,8 @@ router.get('/:id',
 );
 
 // POST /api/todos - Create new todo
-router.post('/',
+router.post(
+  '/',
   validateBody(createTodoSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -69,13 +71,14 @@ router.post('/',
 );
 
 // PUT /api/todos/:id - Update todo
-router.put('/:id',
+router.put(
+  '/:id',
   validateParams(todoIdSchema),
   validateBody(updateTodoSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      
+
       // Check if todo exists
       const existingTodo = await db.getItem(id);
       if (!existingTodo) {
@@ -87,7 +90,7 @@ router.put('/:id',
 
       // Update the todo
       await db.updateItem(id, req.body);
-      
+
       // Get updated todo
       const updatedTodo = await db.getItem(id);
 
@@ -103,12 +106,13 @@ router.put('/:id',
 );
 
 // DELETE /api/todos/:id - Delete todo
-router.delete('/:id',
+router.delete(
+  '/:id',
   validateParams(todoIdSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      
+
       // Check if todo exists
       const existingTodo = await db.getItem(id);
       if (!existingTodo) {
