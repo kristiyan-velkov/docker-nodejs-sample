@@ -64,8 +64,6 @@ docker compose --profile test up app-test --build
 docker compose --profile local up db-local -d  # Local database only
 ```
 
-````
-
 ### Run Locally
 
 For local development with your IDE:
@@ -168,12 +166,14 @@ dist/
 ## 🏗️ Architecture
 
 ### Development Mode
+
 - **Frontend**: Vite dev server on port 5173 with HMR
 - **Backend**: Express server on port 3000 with hot reload
 - **Database**: PostgreSQL on port 5432
 - **Debugging**: Node.js inspector on port 9229
 
 ### Production Mode
+
 - **Single Port**: Express serves both API and static files on port 3000 (container), accessible on port 8080 (host)
 - **Optimized**: Minified builds, security headers, resource limits
 - **Static Files**: React app served from `/dist/client/`
@@ -181,6 +181,7 @@ dist/
 - **SPA Support**: Catch-all routing for React Router
 
 ### Express 5.x Compatibility
+
 - Updated route patterns for compatibility
 - Modern middleware configuration
 - Enhanced security defaults
@@ -234,4 +235,3 @@ Your support helps me continue creating valuable content for the community. Than
 ### License
 
 This project is licensed under the MIT License.
-````
