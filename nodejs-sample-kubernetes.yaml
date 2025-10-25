@@ -1,13 +1,5 @@
 # ========================================
-# Production-Ready Kubernetes Configuration
-# Node.js Todo Application with PostgreSQL
-#
-# Features:
-# - Express 5.x server with esbuild (12KB bundle)
-# - React 19 frontend served from single port
-# - PostgreSQL 16 database with persistent storage
-# - Horizontal Pod Autoscaling
-# - Security hardening and resource limits
+# Node.js Todo App - Kubernetes Deployment
 # ========================================
 
 apiVersion: v1
@@ -15,8 +7,29 @@ kind: Namespace
 metadata:
   name: todoapp
   labels:
-    name: todoapp
+    app: todoapp
+
 ---
+# ========================================
+# ConfigMap for Application Configuration
+# ========================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todoapp-config
+  namespace: todoapp
+data:
+  NODE_ENV: "production"
+  ALLOWED_ORIGINS: "https://yourdomain.com"
+  POSTGRES_HOST: "todoapp-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "todoapp"
+  POSTGRES_USER: "todoapp"
+
+---
+# ========================================
+# Secret for Database Credentials
+# ========================================
 apiVersion: v1
 kind: Secret
 metadata:
@@ -25,21 +38,11 @@ metadata:
 type: Opaque
 data:
   postgres-password: dG9kb2FwcF9wYXNzd29yZA== # base64 encoded "todoapp_password"
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: todoapp-config
-  namespace: todoapp
-data:
-  NODE_ENV: "production"
-  PORT: "3000"
-  ALLOWED_ORIGINS: "https://yourdomain.com"
-  POSTGRES_HOST: "todoapp-postgres"
-  POSTGRES_PORT: "5432"
-  POSTGRES_DB: "todoapp"
-  POSTGRES_USER: "todoapp"
----
+# ========================================
+# PostgreSQL PersistentVolumeClaim
+# ========================================
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -51,8 +54,12 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: standard # Adjust based on your cluster
+  storageClassName: standard
+
 ---
+# ========================================
+# PostgreSQL Deployment
+# ========================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,6 +80,9 @@ spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+              name: postgres
           env:
             - name: POSTGRES_DB
               valueFrom:
@@ -89,18 +99,9 @@ spec:
                 secretKeyRef:
                   name: todoapp-secrets
                   key: postgres-password
-          ports:
-            - containerPort: 5432
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
           livenessProbe:
             exec:
               command:
@@ -125,7 +126,11 @@ spec:
         - name: postgres-storage
           persistentVolumeClaim:
             claimName: postgres-pvc
+
 ---
+# ========================================
+# PostgreSQL Service
+# ========================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -135,12 +140,18 @@ metadata:
     app: todoapp-postgres
 spec:
   type: ClusterIP
-  selector:
-    app: todoapp-postgres
   ports:
     - port: 5432
       targetPort: 5432
+      protocol: TCP
+      name: postgres
+  selector:
+    app: todoapp-postgres
+
 ---
+# ========================================
+# Application Deployment
+# ========================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -148,14 +159,8 @@ metadata:
   namespace: todoapp
   labels:
     app: todoapp
-    version: v1
 spec:
-  replicas: 1
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+  replicas: 3
   selector:
     matchLabels:
       app: todoapp
@@ -163,12 +168,10 @@ spec:
     metadata:
       labels:
         app: todoapp
-        version: v1
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
-        runAsGroup: 1001
         fsGroup: 1001
       containers:
         - name: todoapp
@@ -184,11 +187,6 @@ spec:
                 configMapKeyRef:
                   name: todoapp-config
                   key: NODE_ENV
-            - name: PORT
-              valueFrom:
-                configMapKeyRef:
-                  name: todoapp-config
-                  key: PORT
             - name: ALLOWED_ORIGINS
               valueFrom:
                 configMapKeyRef:
@@ -219,39 +217,36 @@ spec:
                 secretKeyRef:
                   name: todoapp-secrets
                   key: postgres-password
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "100m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
           livenessProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
+            readOnlyRootFilesystem: true
             capabilities:
               drop:
                 - ALL
 
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 30
 ---
+# ========================================
+# Application Service
+# ========================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -261,24 +256,26 @@ metadata:
     app: todoapp
 spec:
   type: ClusterIP
-  selector:
-    app: todoapp
   ports:
     - name: http
       port: 80
       targetPort: 3000
       protocol: TCP
+  selector:
+    app: todoapp
+
 ---
+# ========================================
+# Ingress for External Access
+# ========================================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: todoapp-ingress
   namespace: todoapp
   annotations:
-    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   tls:
     - hosts:
@@ -295,18 +292,11 @@ spec:
                 name: todoapp-service
                 port:
                   number: 80
+
 ---
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: todoapp-pdb
-  namespace: todoapp
-spec:
-  minAvailable: 1
-  selector:
-    matchLabels:
-      app: todoapp
----
+# ========================================
+# HorizontalPodAutoscaler
+# ========================================
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -332,3 +322,18 @@ spec:
         target:
           type: Utilization
           averageUtilization: 80
+
+---
+# ========================================
+# PodDisruptionBudget
+# ========================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: todoapp-pdb
+  namespace: todoapp
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: todoapp

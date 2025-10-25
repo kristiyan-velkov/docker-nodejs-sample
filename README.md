@@ -54,8 +54,8 @@ docker compose up app-dev
 docker compose --profile prod up app-prod --build
 
 # Access production app
-# Full-stack app: http://localhost:3000 (serves both API and frontend)
-# Health Check: http://localhost:3000/health
+# Full-stack app: http://localhost:8080 (serves both API and frontend)
+# Health Check: http://localhost:8080/health
 
 # Run comprehensive test suite
 docker compose --profile test up app-test --build
@@ -174,7 +174,7 @@ dist/
 - **Debugging**: Node.js inspector on port 9229
 
 ### Production Mode
-- **Single Port**: Express serves both API and static files on port 3000
+- **Single Port**: Express serves both API and static files on port 3000 (container), accessible on port 8080 (host)
 - **Optimized**: Minified builds, security headers, resource limits
 - **Static Files**: React app served from `/dist/client/`
 - **API Routes**: Available at `/api/*`

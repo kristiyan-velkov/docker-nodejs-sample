@@ -3,14 +3,10 @@ import cors from 'cors';
 import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
-import { dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { db } from './database/index.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import todosRouter from './routes/todos.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;

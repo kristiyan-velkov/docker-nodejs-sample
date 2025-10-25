@@ -26,7 +26,7 @@ export const useTodos = (): UseTodosReturn => {
     }
   };
 
-  const apiRequest = async <T>(url: string, options?: RequestInit): Promise<T> => {
+  const apiRequest = async <T>(url: string, options?: any): Promise<T> => {
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
@@ -47,9 +47,9 @@ export const useTodos = (): UseTodosReturn => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await apiRequest<ApiResponse<TodoItem[]>>('/api/todos');
-      
+
       if (response.success && response.data) {
         setTodos(response.data);
       } else {
@@ -65,36 +65,34 @@ export const useTodos = (): UseTodosReturn => {
   const addTodo = useCallback(async (name: string) => {
     try {
       setError(null);
-      
+
       const response = await apiRequest<ApiResponse<TodoItem>>('/api/todos', {
         method: 'POST',
         body: JSON.stringify({ name }),
       });
 
       if (response.success && response.data) {
-        setTodos(prev => [...prev, response.data!]);
+        setTodos((prev) => [response.data!, ...prev]);
       } else {
         throw new Error(response.error || 'Failed to add todo');
       }
     } catch (error) {
       handleApiError(error);
-      throw error; // Re-throw to allow component to handle
+      throw error;
     }
   }, []);
 
   const updateTodo = useCallback(async (id: string, updates: Partial<TodoItem>) => {
     try {
       setError(null);
-      
+
       const response = await apiRequest<ApiResponse<TodoItem>>(`/api/todos/${id}`, {
         method: 'PUT',
         body: JSON.stringify(updates),
       });
 
       if (response.success && response.data) {
-        setTodos(prev => prev.map(todo => 
-          todo.id === id ? response.data! : todo
-        ));
+        setTodos((prev) => prev.map((todo) => (todo.id === id ? response.data! : todo)));
       } else {
         throw new Error(response.error || 'Failed to update todo');
       }
@@ -107,13 +105,13 @@ export const useTodos = (): UseTodosReturn => {
   const deleteTodo = useCallback(async (id: string) => {
     try {
       setError(null);
-      
+
       const response = await apiRequest<ApiResponse>(`/api/todos/${id}`, {
         method: 'DELETE',
       });
 
       if (response.success) {
-        setTodos(prev => prev.filter(todo => todo.id !== id));
+        setTodos((prev) => prev.filter((todo) => todo.id !== id));
       } else {
         throw new Error(response.error || 'Failed to delete todo');
       }

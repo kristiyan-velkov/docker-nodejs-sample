@@ -1,118 +1,43 @@
-# ========================================
+# Optimized .dockerignore for Node.js + React Todo App
+# Based on actual project structure
 
-# Docker Build Context Optimization
-
-# ========================================
-
-# Version Control
-
+# Version control
 .git/
-.gitignore
-.gitattributes
 .github/
+.gitignore
 
 # Dependencies (installed in container)
-
 node_modules/
-.npm/
-.yarn/
-.pnp/
-.pnpm-store/
 
-# Build outputs (built in container)
-
+# Build outputs (built in container)  
 dist/
-build/
-out/
-\*.tsbuildinfo
 
-# Environment files (except examples)
+# Environment files
+.env*
 
-.env
-.env.\*
-!.env.example
-
-# Development cache & temp files
-
-.cache/
-.tmp/
-.temp/
-\*.tmp
-
-# Testing & Coverage
-
-coverage/
-.nyc_output/
-test-results/
-\*.lcov
-
-# Logs
-
-logs/
-_.log
-npm-debug.log_
-yarn-debug.log*
-pnpm-debug.log*
-
-# IDE & Editor files
-
+# Development files
 .vscode/
-.idea/
-_.swp
-_.swo
-\*~
+*.log
+coverage/
+.eslintcache
 
 # OS files
-
 .DS_Store
 Thumbs.db
-Desktop.ini
-
-# Docker files (except main Dockerfile)
-
-.dockerignore
-docker-compose*.yml
-compose*.yml
 
 # Documentation
-
-README*.md
-CHANGELOG*
-LICENSE*
-docs/
-nodejs/
 *.md
+docs/
 
-# Linting cache
-
-.eslintcache
-.stylelintcache
-
-# Database files (development)
-
-_.sqlite
-_.sqlite3
-\*.db
-data/
-
-# Security files
-
-_.pem
-_.key
-\*.crt
-
-# Backup files
-
-_.bak
-_.backup
-\*.old
-# Additional optimization excludes
+# Deployment configs
+compose.yml
 Taskfile.yml
-.editorconfig
-.prettierrc*
-jest.config.*
-vitest.config.*
-cypress/
-playwright/
-.storybook/
-storybook-static/
+nodejs-sample-kubernetes.yaml
+
+# Non-essential configs (keep build configs)
+*.config.js
+!vite.config.ts
+!esbuild.config.js  
+!tailwind.config.js
+!postcss.config.js
+!tsconfig.json

@@ -28,7 +28,7 @@ docker compose up --build
 docker compose --profile prod up -d --build
 
 # Access the application
-# - Application: http://localhost:8080
+# - Application: http://localhost:8080 (mapped from container port 3000)
 ```
 
 ## Available Commands

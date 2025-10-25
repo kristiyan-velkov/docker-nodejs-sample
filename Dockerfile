@@ -97,6 +97,11 @@ FROM node:${NODE_VERSION} AS production
 # Set working directory
 WORKDIR /app
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs && \
+    chown -R nodejs:nodejs /app
+
 # Set optimized environment variables
 ENV NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=256 --no-warnings" \
@@ -105,10 +110,8 @@ ENV NODE_ENV=production \
 # Copy production dependencies from deps stage
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=deps --chown=nodejs:nodejs /app/package*.json ./
-
 # Copy built application from build stage
 COPY --from=build --chown=nodejs:nodejs /app/dist ./dist
-
 
 # Switch to non-root user for security
 USER nodejs

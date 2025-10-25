@@ -16,8 +16,8 @@ bun.lockb
 # ========================================
 dist/
 build/
-nodejs/
 out/
+docs/
 .next/
 .nuxt/
 *.tsbuildinfo

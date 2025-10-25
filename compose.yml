@@ -68,7 +68,7 @@ services:
       target: production
     container_name: todoapp-prod
     ports:
-      - '${APP_PORT:-3000}:3000'
+      - '${PROD_PORT:-8080}:3000'
     environment:
       NODE_ENV: production
       POSTGRES_HOST: db
