@@ -20,7 +20,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loadi
         <div className="w-2 h-2 bg-white/60 rounded-full animate-bounce animation-delay-200"></div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .animation-delay-100 {
           animation-delay: 0.1s;
         }
