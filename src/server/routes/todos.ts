@@ -24,7 +24,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 router.get(
   '/:id',
   validateParams(todoIdSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
     try {
       const item = await db.getItem(req.params.id);
 
@@ -75,7 +75,7 @@ router.put(
   '/:id',
   validateParams(todoIdSchema),
   validateBody(updateTodoSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
 
@@ -109,7 +109,7 @@ router.put(
 router.delete(
   '/:id',
   validateParams(todoIdSchema),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
 

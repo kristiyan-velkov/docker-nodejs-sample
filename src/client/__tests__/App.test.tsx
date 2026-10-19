@@ -4,9 +4,9 @@ import App from '../App';
 
 // Mock the useTodos hook
 const mockUseTodos = {
-  todos: [],
+  todos: [] as { id: string; name: string; completed: boolean }[],
   loading: false,
-  error: null,
+  error: null as string | null,
   addTodo: vi.fn(),
   updateTodo: vi.fn(),
   deleteTodo: vi.fn(),

@@ -14,12 +14,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom/vitest"],
     "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/client/components/*"],
-      "@/utils/*": ["src/shared/utils/*"],
-      "@/types/*": ["src/shared/types/*"]
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/client/components/*"],
+      "@/utils/*": ["./src/shared/utils/*"],
+      "@/types/*": ["./src/shared/types/*"]
     }
   },
   "include": ["src/**/*", "vite.config.ts"],

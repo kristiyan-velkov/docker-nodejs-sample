@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,10 +12,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@/components': resolve(__dirname, './src/client/components'),
-      '@/utils': resolve(__dirname, './src/shared/utils'),
-      '@/types': resolve(__dirname, './src/shared/types'),
+      '@': resolve(import.meta.dirname, './src'),
+      '@/components': resolve(import.meta.dirname, './src/client/components'),
+      '@/utils': resolve(import.meta.dirname, './src/shared/utils'),
+      '@/types': resolve(import.meta.dirname, './src/shared/types'),
     },
   },
   server: {
