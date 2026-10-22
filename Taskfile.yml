@@ -23,7 +23,7 @@ vars:
   DOCKERFILE_PRODUCTION: Dockerfile
   DOCKERFILE_DEVELOPMENT: Dockerfile.development
   DOCKERFILE_TEST: Dockerfile.test
-  NODE_VERSION: 24.14.0-alpine
+  NODE_VERSION: 24.22.1-alpine
   NODE_ENV: production
   
   # Docker Compose Configuration

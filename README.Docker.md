@@ -58,7 +58,7 @@ Uses `Dockerfile.test`; requires `db` (Compose starts profile services together 
 | **`Dockerfile.development`** | Dev dependencies; runs as **root** so bind-mounted `vite.config.ts` etc. stay writable (Vite writes `*.timestamp-*.mjs` beside the config) |
 | **`Dockerfile.test`** | Full install; `CMD npm run test:coverage` for CI/Compose |
 
-Default Node base: **`ARG NODE_VERSION=24.14.0-alpine`** (override with `docker build --build-arg NODE_VERSION=...`).
+Default Node base: **`ARG NODE_VERSION=24.22.1-alpine`** (override with `docker build --build-arg NODE_VERSION=...`).
 
 ---
 
